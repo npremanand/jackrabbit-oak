@@ -28,11 +28,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import com.google.common.base.Objects;
+import com.google.common.base.MoreObjects.ToStringHelper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static com.google.common.base.Objects.ToStringHelper;
+import static com.google.common.base.MoreObjects.toStringHelper;
 
 // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 // !! THIS UTILITY CLASS IS A COPY FROM APACHE SLING !!
@@ -258,7 +259,7 @@ public final class PropertiesUtil {
 
         // Set all configured bean properties
         Map<String, Method> setters = getSetters(objectClass);
-        ToStringHelper toStringHelper = Objects.toStringHelper(instance);
+        ToStringHelper toStringHelper = toStringHelper(instance);
         for(Map.Entry<String,?> e : config.entrySet()) {
             String name = e.getKey();
             Method setter = setters.get(name);

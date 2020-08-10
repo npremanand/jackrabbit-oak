@@ -27,6 +27,7 @@ import java.util.Map;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Streams;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -108,7 +109,7 @@ public class DataStoreCacheUpgradeUtils {
         File newDownloadDir = new File(path, DOWNLOAD_DIR);
 
         Iterator<File> iterator =
-            Files.fileTreeTraverser().postOrderTraversal(path)
+            Streams.stream(Files.fileTraverser().depthFirstPostOrder(path))
                 .filter(new Predicate<File>() {
                     @Override public boolean apply(File input) {
                         return input.isFile()

@@ -28,10 +28,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.AbstractIterator;
 import com.google.common.collect.FluentIterable;
+import com.google.common.collect.Streams;
 import com.google.common.io.Files;
 
 import org.apache.commons.io.FileUtils;
@@ -242,9 +244,10 @@ public class FileBlobStore extends AbstractBlobStore {
 
     @Override
     public Iterator<String> getAllChunkIds(final long maxLastModifiedTime) throws Exception {
-        FluentIterable<File> iterable = Files.fileTreeTraverser().postOrderTraversal(baseDir);
+        Iterable<File> iterable = Files.fileTraverser().depthFirstPostOrder(baseDir);
+        Stream<File> stream = Streams.stream(iterable);
         final Iterator<File> iter =
-                iterable.filter(new Predicate<File>() {
+                stream.filter(new Predicate<File>() {
                     // Ignore the directories and files newer than maxLastModifiedTime if specified
                     @Override
                     public boolean apply(@Nullable File input) {

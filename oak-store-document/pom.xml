@@ -32,7 +32,7 @@
   <packaging>bundle</packaging>
 
   <properties>
-    <test.opts.memory>-Xmx512m -Xss256k</test.opts.memory>
+    <test.opts.memory>-Xms2048m -Xmx4096m -Xss1024k</test.opts.memory>
   </properties>
 
   <build>

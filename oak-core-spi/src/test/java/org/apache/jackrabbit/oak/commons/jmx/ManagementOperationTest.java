@@ -20,7 +20,7 @@
 package org.apache.jackrabbit.oak.commons.jmx;
 
 import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static java.lang.Thread.currentThread;
 import static java.lang.Thread.sleep;
 import static java.util.concurrent.Executors.newCachedThreadPool;
@@ -41,7 +41,6 @@ import java.util.concurrent.TimeoutException;
 import javax.management.openmbean.CompositeData;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
-import org.apache.jackrabbit.oak.commons.jmx.ManagementOperation;
 import org.apache.jackrabbit.oak.commons.jmx.ManagementOperation.Status;
 import org.junit.After;
 import org.junit.Before;
@@ -65,7 +64,7 @@ public class ManagementOperationTest {
         ManagementOperation<Integer> op = ManagementOperation.done("test", 42);
         assertTrue(op.isDone());
         assertEquals(42, (int) op.get());
-        sameThreadExecutor().execute(op);
+        directExecutor().execute(op);
     }
 
     @Test

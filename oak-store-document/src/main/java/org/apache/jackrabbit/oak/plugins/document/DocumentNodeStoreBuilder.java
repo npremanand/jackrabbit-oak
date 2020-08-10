@@ -453,7 +453,7 @@ public class DocumentNodeStoreBuilder<T extends DocumentNodeStoreBuilder<T>> {
 
     public Executor getExecutor() {
         if(executor == null){
-            return MoreExecutors.sameThreadExecutor();
+            return MoreExecutors.directExecutor();
         }
         return executor;
     }

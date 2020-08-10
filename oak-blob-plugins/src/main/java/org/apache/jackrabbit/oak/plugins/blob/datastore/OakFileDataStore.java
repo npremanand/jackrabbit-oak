@@ -35,6 +35,7 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Streams;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
@@ -75,7 +76,7 @@ public class OakFileDataStore extends FileDataStore implements SharedDataStore {
     @Override
     public Iterator<DataIdentifier> getAllIdentifiers() {
         final String path = normalizeNoEndSeparator(new File(getPath()).getAbsolutePath());
-        return Files.fileTreeTraverser().postOrderTraversal(new File(path))
+        return Streams.stream(Files.fileTraverser().depthFirstPostOrder(new File(path)))
                 .filter(new Predicate<File>() {
                     @Override
                     public boolean apply(File input) {
@@ -83,7 +84,7 @@ public class OakFileDataStore extends FileDataStore implements SharedDataStore {
                             !input.getParent().equals(path);
                     }
                 })
-                .transform(new Function<File, DataIdentifier>() {
+                .map(new Function<File, DataIdentifier>() {
                     @Override
                     public DataIdentifier apply(File input) {
                         return new DataIdentifier(input.getName());
@@ -274,7 +275,7 @@ public class OakFileDataStore extends FileDataStore implements SharedDataStore {
     public Iterator<DataRecord> getAllRecords() {
         final String path = normalizeNoEndSeparator(new File(getPath()).getAbsolutePath());
         final OakFileDataStore store = this;
-        return Files.fileTreeTraverser().postOrderTraversal(new File(path))
+        return Streams.stream(Files.fileTraverser().depthFirstPostOrder(new File(path)))
             .filter(new Predicate<File>() {
                 @Override
                 public boolean apply(File input) {
@@ -282,7 +283,7 @@ public class OakFileDataStore extends FileDataStore implements SharedDataStore {
                         !input.getParent().equals(path);
                 }
             })
-            .transform(new Function<File, DataRecord>() {
+            .map(new Function<File, DataRecord>() {
                 @Override
                 public DataRecord apply(File input) {
                     return new FileDataRecord(store, new DataIdentifier(input.getName()), input);

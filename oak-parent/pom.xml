@@ -34,7 +34,7 @@
   <packaging>pom</packaging>
 
   <properties>
-    <test.opts.memory>-Xmx512m</test.opts.memory>
+    <test.opts.memory>-Xms1024m -Xmx4096m</test.opts.memory>
     <test.opts>${test.opts.coverage} ${test.opts.memory} -XX:+HeapDumpOnOutOfMemoryError -Dupdate.limit=100 -Djava.awt.headless=true</test.opts>
     <skip.deployment>false</skip.deployment>
     <skip.coverage>true</skip.coverage>
@@ -44,7 +44,7 @@
     <project.reporting.outputEncoding>
       ${project.build.sourceEncoding}
     </project.reporting.outputEncoding>
-    <jackrabbit.version>2.20.1</jackrabbit.version>
+    <jackrabbit.version>2.21.3-SNAPSHOT</jackrabbit.version>
     <mongo.host>127.0.0.1</mongo.host>
     <mongo.port>27017</mongo.port>
     <mongo.db>MongoMKDB</mongo.db>
@@ -60,8 +60,8 @@
     <logback.version>1.2.3</logback.version>
     <h2.version>1.4.194</h2.version>
     <tika.version>1.24.1</tika.version>
-    <guava.version>15.0</guava.version>
-    <guava.osgi.import>com.google.common.*;version="[15.0,21)"</guava.osgi.import>
+    <guava.version>24.1.1-jre</guava.version>
+    <guava.osgi.import>com.google.common.*;version="[24.1.1-jre,24.1.1-jre)"</guava.osgi.import>
     <derby.version>10.14.2.0</derby.version>
     <jackson.version>2.10.3</jackson.version>
     <java.version>1.8</java.version>
@@ -863,6 +863,11 @@
             <artifactId>derby</artifactId>
             <version>${derby.version}</version>
          </dependency>
+         <dependency>
+          <groupId>org.apache.derby</groupId>
+          <artifactId>derbytools</artifactId>
+          <version>${derby.version}</version>
+         </dependency>
       </dependencies>
    </profile>
    
@@ -1049,7 +1054,7 @@
     <profile>
       <id>guava-latest</id>
       <properties>
-        <guava.version>20.0</guava.version>
+        <guava.version>29.0-jre</guava.version>
       </properties>
 	  </profile>
     <profile>
@@ -1058,6 +1063,11 @@
         <dependency>
           <groupId>org.apache.derby</groupId>
           <artifactId>derby</artifactId>
+          <version>${derby.version}</version>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.derby</groupId>
+          <artifactId>derbytools</artifactId>
           <version>${derby.version}</version>
         </dependency>
       </dependencies>

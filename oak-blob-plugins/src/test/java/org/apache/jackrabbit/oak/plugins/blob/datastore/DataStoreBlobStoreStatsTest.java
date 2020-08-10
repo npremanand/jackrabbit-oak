@@ -96,11 +96,11 @@ public class DataStoreBlobStoreStatsTest {
             }
         }
 
-        assertEquals(downloadCount + 2, stats.getDownloadCount());
-        assertEquals(downloadTotalSize + (BLOB_LEN * 2), stats.getDownloadTotalSize());
-        assertEquals(downloadCountLastMinute + 2,
+        assertEquals(downloadCount + 1, stats.getDownloadCount());
+        assertEquals(downloadTotalSize + (BLOB_LEN * 1), stats.getDownloadTotalSize());
+        assertEquals(downloadCountLastMinute + 1,
                 waitForMetric(input -> getLastMinuteStats(stats.getDownloadCountHistory()),
-                        stats, 2L, 0L).longValue());
+                        stats, 1L, 0L).longValue());
 
         // Ensure that the metrics don't overlap.  Calling readBlob() shouldn't increment
         // the getRecord() counts.

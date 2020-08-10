@@ -32,6 +32,7 @@ import java.util.Properties;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Streams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
@@ -157,13 +158,13 @@ public class FSBackend extends AbstractSharedBackend {
 
     @Override
     public Iterator<DataIdentifier> getAllIdentifiers() throws DataStoreException {
-        return Files.fileTreeTraverser().postOrderTraversal(fsPathDir)
+        return Streams.stream(Files.fileTraverser().depthFirstPostOrder(fsPathDir))
             .filter(new Predicate<File>() {
                 @Override public boolean apply(File input) {
                     return input.isFile() && !normalizeNoEndSeparator(input.getParent())
                         .equals(fsPath);
                 }
-            }).transform(new Function<File, DataIdentifier>() {
+            }).map(new Function<File, DataIdentifier>() {
                 @Override public DataIdentifier apply(File input) {
                     return new DataIdentifier(input.getName());
                 }
@@ -307,15 +308,15 @@ public class FSBackend extends AbstractSharedBackend {
     @Override
     public Iterator<DataRecord> getAllRecords() {
         final AbstractSharedBackend backend = this;
-        return Files.fileTreeTraverser().postOrderTraversal(fsPathDir)
+        return Streams.stream(Files.fileTraverser().depthFirstPostOrder(fsPathDir))
             .filter(new Predicate<File>() {
                 @Override public boolean apply(File input) {
                     return input.isFile() && !normalizeNoEndSeparator(input.getParent())
                         .equals(fsPath);
                 }
-            }).transform(new Function<File, DataRecord>() {
+            }).map(new Function<File, DataRecord>() {
                 @Override public DataRecord apply(File input) {
-                    return new FSBackendDataRecord(backend, new DataIdentifier(input.getName()),
+                    return (DataRecord)new FSBackendDataRecord(backend, new DataIdentifier(input.getName()),
                         input);
                 }
             }).iterator();

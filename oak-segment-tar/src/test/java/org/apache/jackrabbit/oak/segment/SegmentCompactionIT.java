@@ -24,7 +24,6 @@ import static com.google.common.collect.Iterables.get;
 import static com.google.common.collect.Lists.newArrayList;
 import static com.google.common.collect.Sets.newConcurrentHashSet;
 import static com.google.common.util.concurrent.Futures.addCallback;
-import static com.google.common.util.concurrent.Futures.dereference;
 import static com.google.common.util.concurrent.Futures.immediateCancelledFuture;
 import static com.google.common.util.concurrent.MoreExecutors.listeningDecorator;
 import static java.lang.Boolean.parseBoolean;
@@ -76,10 +75,14 @@ import javax.management.NotCompliantMBeanException;
 import javax.management.ObjectName;
 
 import com.google.common.base.Predicate;
+import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.apache.jackrabbit.oak.api.Blob;
 import org.apache.jackrabbit.oak.api.CommitFailedException;
 import org.apache.jackrabbit.oak.api.PropertyState;
@@ -372,7 +375,7 @@ public class SegmentCompactionIT {
             public void onFailure(Throwable t) {
                 segmentCompactionMBean.error("Compactor error", t);
             }
-        });
+        }, MoreExecutors.directExecutor());
     }
 
     private void scheduleWriter() {
@@ -396,7 +399,7 @@ public class SegmentCompactionIT {
                     writers.remove(futureWriter);
                     segmentCompactionMBean.error("Writer error", t);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 
@@ -427,7 +430,7 @@ public class SegmentCompactionIT {
                     readers.remove(futureReader);
                     segmentCompactionMBean.error("Node reader error", t);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 
@@ -452,23 +455,37 @@ public class SegmentCompactionIT {
                     references.remove(futureReference);
                     segmentCompactionMBean.error("Reference error", t);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         } else {
             scheduleReader();
         }
     }
+
+   /**
+   * Helper {@code Function} for {@link #dereference}.
+   */
+  private static final AsyncFunction<ListenableFuture<Object>, Object> DEREFERENCER =
+  new AsyncFunction<ListenableFuture<Object>, Object>() {
+    @Override
+    public ListenableFuture<Object> apply(ListenableFuture<Object> input) {
+      return input;
+    }
+  };
 
     private synchronized void scheduleCheckpoints() {
         while (checkpoints.size() < maxCheckpoints) {
             Checkpoint checkpoint = new Checkpoint(nodeStore);
 
             // Flatmap that sh..
-            ListenableFuture<Void> futureCheckpoint = dereference(scheduler.schedule(
+            ListenableScheduledFuture<ListenableScheduledFuture<Void>> schedule = scheduler.schedule(
                 () -> {
                     checkpoint.acquire();
                     return scheduler.schedule(checkpoint::release, checkpointInterval, SECONDS);
                 },
-                rnd.nextInt(checkpointInterval), SECONDS));
+                rnd.nextInt(checkpointInterval), SECONDS);
+
+            ListenableFuture<Void> futureCheckpoint = Futures.transformAsync(
+                (ListenableFuture) schedule, (AsyncFunction) DEREFERENCER, MoreExecutors.directExecutor());
 
             checkpoints.add(futureCheckpoint);
             addCallback(futureCheckpoint, new FutureCallback<Object>() {
@@ -486,7 +503,7 @@ public class SegmentCompactionIT {
                     checkpoints.remove(futureCheckpoint);
                     segmentCompactionMBean.error("Checkpoint error", t);
                 }
-            });
+            }, MoreExecutors.directExecutor());
         }
     }
 

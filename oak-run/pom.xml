@@ -32,7 +32,7 @@
 
   <properties>
     <jetty.version>8.2.0.v20160908</jetty.version>
-    <groovy.version>2.4.17</groovy.version>
+    <groovy.version>2.4.19</groovy.version>
     <!--
       Size History:
       + 54 MB AWS support for segment-tar (OAK-8827)

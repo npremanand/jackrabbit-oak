@@ -29,6 +29,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
@@ -37,6 +38,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.RemovalCause;
 import com.google.common.cache.Weigher;
+import com.google.common.collect.Streams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import org.apache.commons.io.FileUtils;
@@ -309,7 +311,7 @@ public class FileCache extends AbstractCache<String, File> implements Closeable 
         DataStoreCacheUpgradeUtils.moveDownloadCache(parent);
 
         // Iterate over all files in the cache folder
-        Iterator<File> iter = Files.fileTreeTraverser().postOrderTraversal(cacheRoot)
+        Iterator<File> iter = Streams.stream(Files.fileTraverser().depthFirstPostOrder(cacheRoot))
             .filter(new Predicate<File>() {
                 @Override public boolean apply(File input) {
                     return input.isFile() && !normalizeNoEndSeparator(input.getParent())

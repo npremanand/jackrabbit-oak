@@ -16,7 +16,7 @@
  */
 package org.apache.jackrabbit.oak.plugins.index.lucene.directory;
 
-import static com.google.common.util.concurrent.MoreExecutors.sameThreadExecutor;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import static org.apache.jackrabbit.oak.plugins.index.IndexCommitCallback.IndexProgress.COMMIT_FAILED;
 import static org.apache.jackrabbit.oak.plugins.index.IndexCommitCallback.IndexProgress.COMMIT_SUCCEDED;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -48,6 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import ch.qos.logback.classic.Level;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.MoreExecutors;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.jackrabbit.core.data.DataStoreException;
 import org.apache.jackrabbit.oak.commons.CIHelper;
@@ -82,7 +84,7 @@ public class ActiveDeletedBlobCollectorTest {
 
     private void createBlobCollector() {
         adbc = new ActiveDeletedBlobCollectorImpl(clock,
-                new File(blobCollectionRoot.getRoot(), "/a"), sameThreadExecutor());
+                new File(blobCollectionRoot.getRoot(), "/a"), MoreExecutors.newDirectExecutorService());
     }
 
     @Test
@@ -280,11 +282,11 @@ public class ActiveDeletedBlobCollectorTest {
                         PosixFilePermission.GROUP_READ,
                         PosixFilePermission.OTHERS_READ));
 
-        adbc = ActiveDeletedBlobCollectorFactory.newInstance(unwritableExistingRootFolder, sameThreadExecutor());
+        adbc = ActiveDeletedBlobCollectorFactory.newInstance(unwritableExistingRootFolder, MoreExecutors.newDirectExecutorService());
         assertEquals("Unwritable existing root folder must have NOOP active blob collector",
                 ActiveDeletedBlobCollectorFactory.NOOP, adbc);
 
-        adbc = ActiveDeletedBlobCollectorFactory.newInstance(unwritableNonExistingRootFolder, sameThreadExecutor());
+        adbc = ActiveDeletedBlobCollectorFactory.newInstance(unwritableNonExistingRootFolder, MoreExecutors.newDirectExecutorService());
         assertEquals("Unwritable non-existing root folder must have NOOP active blob collector",
                 ActiveDeletedBlobCollectorFactory.NOOP, adbc);
     }

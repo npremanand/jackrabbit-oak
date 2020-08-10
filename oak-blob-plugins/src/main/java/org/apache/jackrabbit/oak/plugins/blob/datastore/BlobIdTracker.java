@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -33,6 +34,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Streams;
 import com.google.common.io.Files;
 import org.apache.jackrabbit.core.data.DataRecord;
 import org.apache.jackrabbit.oak.commons.concurrent.ExecutorCloser;
@@ -48,7 +50,7 @@ import static com.google.common.base.Charsets.UTF_8;
 import static com.google.common.base.Predicates.alwaysTrue;
 import static com.google.common.collect.Iterables.transform;
 import static com.google.common.collect.Lists.newArrayList;
-import static com.google.common.io.Files.fileTreeTraverser;
+import static com.google.common.io.Files.fileTraverser;
 import static com.google.common.io.Files.move;
 import static com.google.common.io.Files.newWriter;
 import static java.io.File.createTempFile;
@@ -507,12 +509,11 @@ public class BlobIdTracker implements Closeable, BlobTracker {
 
             // Retrieve the process file if it exists
             processFile =
-                fileTreeTraverser().breadthFirstTraversal(rootDir).firstMatch(IN_PROCESS.filter())
-                    .orNull();
+                Streams.stream(fileTraverser().breadthFirst(rootDir)).filter(IN_PROCESS.filter()).findFirst().orElse(null);
 
             // Get the List of all generations available.
-            generations = synchronizedList(newArrayList(
-                fileTreeTraverser().breadthFirstTraversal(rootDir).filter(GENERATION.filter())));
+            generations = synchronizedList(newArrayList((File[])
+                Streams.stream(fileTraverser().breadthFirst(rootDir)).filter(GENERATION.filter()).toArray(File[]::new)));
 
             // Close/rename any existing in process
             nextGeneration();
