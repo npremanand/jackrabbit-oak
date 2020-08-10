@@ -18,8 +18,7 @@ package org.apache.jackrabbit.oak.plugins.index.elastic.index;
 
 import org.apache.jackrabbit.oak.plugins.index.elastic.ElasticConnection;
 import org.apache.jackrabbit.oak.plugins.index.elastic.ElasticIndexDefinition;
-import org.apache.jackrabbit.oak.spi.state.NodeBuilder;
-import org.elasticsearch.action.bulk.BulkProcessor;
+import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.index.IndexRequest;
 import org.junit.Before;
@@ -27,6 +26,8 @@ import org.junit.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+
+import java.io.IOException;
 
 import static org.apache.jackrabbit.oak.plugins.index.elastic.ElasticTestUtils.randomString;
 import static org.hamcrest.CoreMatchers.not;
@@ -46,10 +47,7 @@ public class ElasticIndexWriterTest {
     private ElasticIndexDefinition indexDefinitionMock;
 
     @Mock
-    private BulkProcessor bulkProcessorMock;
-
-    @Mock
-    private NodeBuilder definitionBuilder;
+    private ElasticBulkProcessorHandler bulkProcessorHandlerMock;
 
     private ElasticIndexWriter indexWriter;
 
@@ -57,7 +55,7 @@ public class ElasticIndexWriterTest {
     public void setUp() {
         MockitoAnnotations.initMocks(this);
         when(indexDefinitionMock.getRemoteIndexAlias()).thenReturn("test-index");
-        indexWriter = new ElasticIndexWriter(elasticConnectionMock, indexDefinitionMock, bulkProcessorMock, definitionBuilder);
+        indexWriter = new ElasticIndexWriter(elasticConnectionMock, indexDefinitionMock, bulkProcessorHandlerMock);
     }
 
     @Test
@@ -65,7 +63,7 @@ public class ElasticIndexWriterTest {
         indexWriter.updateDocument("/foo", new ElasticDocument("/foo"));
 
         ArgumentCaptor<IndexRequest> acIndexRequest = ArgumentCaptor.forClass(IndexRequest.class);
-        verify(bulkProcessorMock).add(acIndexRequest.capture());
+        verify(bulkProcessorHandlerMock).add(acIndexRequest.capture());
 
         IndexRequest request = acIndexRequest.getValue();
         assertEquals("test-index", request.index());
@@ -77,7 +75,7 @@ public class ElasticIndexWriterTest {
         indexWriter.deleteDocuments("/bar");
 
         ArgumentCaptor<DeleteRequest> acDeleteRequest = ArgumentCaptor.forClass(DeleteRequest.class);
-        verify(bulkProcessorMock).add(acDeleteRequest.capture());
+        verify(bulkProcessorHandlerMock).add(acDeleteRequest.capture());
 
         DeleteRequest request = acDeleteRequest.getValue();
         assertEquals("test-index", request.index());
@@ -91,10 +89,8 @@ public class ElasticIndexWriterTest {
         indexWriter.deleteDocuments("/foo");
         indexWriter.deleteDocuments("/bar");
 
-        ArgumentCaptor<IndexRequest> acIndexRequest = ArgumentCaptor.forClass(IndexRequest.class);
-        verify(bulkProcessorMock, times(2)).add(acIndexRequest.capture());
-        ArgumentCaptor<DeleteRequest> acDeleteRequest = ArgumentCaptor.forClass(DeleteRequest.class);
-        verify(bulkProcessorMock, times(2)).add(acDeleteRequest.capture());
+        ArgumentCaptor<DocWriteRequest<?>> request = ArgumentCaptor.forClass(DocWriteRequest.class);
+        verify(bulkProcessorHandlerMock, times(4)).add(request.capture());
     }
 
     @Test
@@ -104,7 +100,7 @@ public class ElasticIndexWriterTest {
         indexWriter.updateDocument(generatedPath, new ElasticDocument(generatedPath));
 
         ArgumentCaptor<IndexRequest> acIndexRequest = ArgumentCaptor.forClass(IndexRequest.class);
-        verify(bulkProcessorMock).add(acIndexRequest.capture());
+        verify(bulkProcessorHandlerMock).add(acIndexRequest.capture());
 
         IndexRequest request = acIndexRequest.getValue();
         assertThat(request.id(), not(generatedPath));
@@ -112,9 +108,9 @@ public class ElasticIndexWriterTest {
     }
 
     @Test
-    public void closeBulkProcessor() {
+    public void closeBulkProcessor() throws IOException {
         indexWriter.close(System.currentTimeMillis());
-        verify(bulkProcessorMock).close();
+        verify(bulkProcessorHandlerMock).close();
     }
 
 }

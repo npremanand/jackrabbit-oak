@@ -30,6 +30,8 @@ import org.apache.jackrabbit.oak.plugins.index.search.ExtractedTextCache;
 import org.apache.jackrabbit.oak.plugins.index.search.util.IndexDefinitionBuilder;
 import org.apache.jackrabbit.oak.plugins.memory.MemoryNodeStore;
 import org.apache.jackrabbit.oak.query.facet.FacetResult;
+import org.apache.jackrabbit.oak.spi.commit.Observer;
+import org.apache.jackrabbit.oak.spi.query.QueryIndexProvider;
 import org.apache.jackrabbit.oak.spi.state.NodeStore;
 import org.junit.After;
 import org.junit.Before;
@@ -59,7 +61,6 @@ import java.util.stream.Collectors;
 import static org.apache.jackrabbit.commons.JcrUtils.getOrCreateByPath;
 import static org.apache.jackrabbit.oak.InitialContentHelper.INITIAL_CONTENT;
 import static org.apache.jackrabbit.oak.plugins.index.IndexConstants.INDEX_DEFINITIONS_NAME;
-import static org.apache.jackrabbit.oak.plugins.index.elastic.ElasticIndexDefinition.BULK_FLUSH_INTERVAL_MS_DEFAULT;
 import static org.apache.jackrabbit.oak.plugins.index.search.FulltextIndexConstants.FACETS;
 import static org.apache.jackrabbit.oak.plugins.index.search.FulltextIndexConstants.PROP_REFRESH_DEFN;
 import static org.apache.jackrabbit.oak.plugins.index.search.FulltextIndexConstants.PROP_SECURE_FACETS;
@@ -125,7 +126,8 @@ public class ElasticFacetTest {
         NodeStore nodeStore = new MemoryNodeStore(INITIAL_CONTENT);
         Oak oak = new Oak(nodeStore)
                 .with(editorProvider)
-                .with(indexProvider);
+                .with((Observer) indexProvider)
+                .with((QueryIndexProvider) indexProvider);
 
         Jcr jcr = new Jcr(oak);
         Repository repository = jcr.createRepository();
@@ -164,6 +166,7 @@ public class ElasticFacetTest {
         IndexSkeleton indexSkeleton = new IndexSkeleton();
         indexSkeleton.initialize();
         indexSkeleton.indexDefinitionBuilder.noAsync();
+        indexSkeleton.indexDefinitionBuilder.getBuilderTree().setProperty("sync-mode", "rt");
         indexSkeleton.indexRule.property("cons").propertyIndex();
         indexSkeleton.indexRule.property("foo").propertyIndex().getBuilderTree().setProperty(FACET_PROP, true, Type.BOOLEAN);
         indexSkeleton.indexRule.property("bar").propertyIndex().getBuilderTree().setProperty(FACET_PROP, true, Type.BOOLEAN);
@@ -226,7 +229,7 @@ public class ElasticFacetTest {
     @Test
     public void secureFacets() throws Exception {
         createDataset(NUM_LEAF_NODES_FOR_LARGE_DATASET);
-        assertEventually(() -> assertEquals(actualAclLabelCount, getFacets()));
+        assertEquals(actualAclLabelCount, getFacets());
     }
 
     @Test
@@ -236,7 +239,7 @@ public class ElasticFacetTest {
         inaccessibleChild.setProperty("cons", "val");
         inaccessibleChild.setProperty("foo", "l4");
         adminSession.save();
-        assertEventually(() -> assertEquals(actualAclLabelCount, getFacets()));
+        assertEquals(actualAclLabelCount, getFacets());
     }
 
     @Test
@@ -246,7 +249,7 @@ public class ElasticFacetTest {
         adminSession.save();
 
         createDataset(NUM_LEAF_NODES_FOR_LARGE_DATASET);
-        assertEventually(() -> assertEquals(actualLabelCount, getFacets()));
+        assertEquals(actualLabelCount, getFacets());
     }
 
     @Test
@@ -258,17 +261,15 @@ public class ElasticFacetTest {
 
         createDataset(NUM_LEAF_NODES_FOR_LARGE_DATASET);
 
-        assertEventually(() -> assertEquals("Unexpected number of facets", actualAclLabelCount.size(), getFacets().size()));
+        assertEquals("Unexpected number of facets", actualAclLabelCount.size(), getFacets().size());
 
         for (Map.Entry<String, Integer> facet : actualAclLabelCount.entrySet()) {
             String facetLabel = facet.getKey();
-            assertEventually(() -> {
-                int facetCount = getFacets().get(facetLabel);
-                float ratio = ((float) facetCount) / facet.getValue();
-                assertTrue("Facet count for label: " + facetLabel + " is outside of 10% margin of error. " +
-                                "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
-                        Math.abs(ratio - 1) < 0.1);
-            });
+            int facetCount = getFacets().get(facetLabel);
+            float ratio = ((float) facetCount) / facet.getValue();
+            assertTrue("Facet count for label: " + facetLabel + " is outside of 10% margin of error. " +
+                            "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
+                    Math.abs(ratio - 1) < 0.1);
         }
     }
 
@@ -281,11 +282,11 @@ public class ElasticFacetTest {
 
         createDataset(NUM_LEAF_NODES_FOR_SMALL_DATASET);
 
-        assertEventually(() -> assertEquals("Unexpected number of facets", actualAclLabelCount.size(), getFacets().size()));
+        assertEquals("Unexpected number of facets", actualAclLabelCount.size(), getFacets().size());
 
         // Since the hit count is less than sample size -> flow should have switched to secure facet count instead of statistical
         // and thus the count should be exactly equal
-        assertEventually(() -> assertEquals(actualAclLabelCount, getFacets()));
+        assertEquals(actualAclLabelCount, getFacets());
     }
 
     @Test
@@ -297,19 +298,17 @@ public class ElasticFacetTest {
 
         createDataset(NUM_LEAF_NODES_FOR_LARGE_DATASET);
 
-        assertEventually(() -> {
-            Map<String, Integer> facets = getFacets("/parent/par1");
-            assertEquals("Unexpected number of facets", actualAclPar1LabelCount.size(), facets.size());
+        Map<String, Integer> facets = getFacets("/parent/par1");
+        assertEquals("Unexpected number of facets", actualAclPar1LabelCount.size(), facets.size());
 
         for (Map.Entry<String, Integer> facet : actualAclPar1LabelCount.entrySet()) {
             String facetLabel = facet.getKey();
             int facetCount = facets.get(facetLabel);
             float ratio = ((float) facetCount) / facet.getValue();
             assertTrue("Facet count for label: " + facetLabel + " is outside of 10% margin of error. " +
-                                "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
-                        Math.abs(ratio - 1) < 0.1);
-            }
-        });
+                            "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
+                    Math.abs(ratio - 1) < 0.1);
+        }
     }
 
     @Test
@@ -324,21 +323,19 @@ public class ElasticFacetTest {
         inaccessibleChild.setProperty("cons", "val");
         inaccessibleChild.setProperty("foo", "l4");
         adminSession.save();
-        assertEventually(() -> {
-            Map<String, Integer> facets = getFacets();
-            assertEquals("Unexpected number of facets", actualAclLabelCount.size(), facets.size());
-        });
+
+        Map<String, Integer> facets = getFacets();
+        assertEquals("Unexpected number of facets", actualAclLabelCount.size(), facets.size());
 
         for (Map.Entry<String, Integer> facet : actualAclLabelCount.entrySet()) {
 
-            assertEventually(() -> {
-                String facetLabel = facet.getKey();
-                int facetCount = getFacets().get(facetLabel);
-                float ratio = ((float) facetCount) / facet.getValue();
-                assertTrue("Facet count for label: " + facetLabel + " is outside of 10% margin of error. " +
-                                "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
-                        Math.abs(ratio - 1) < 0.1);
-            });
+
+            String facetLabel = facet.getKey();
+            int facetCount = getFacets().get(facetLabel);
+            float ratio = ((float) facetCount) / facet.getValue();
+            assertTrue("Facet count for label: " + facetLabel + " is outside of 10% margin of error. " +
+                            "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
+                    Math.abs(ratio - 1) < 0.1);
         }
     }
 
@@ -350,7 +347,7 @@ public class ElasticFacetTest {
         adminSession.save();
         createDataset(NUM_LEAF_NODES_FOR_LARGE_DATASET);
         qe = adminSession.getWorkspace().getQueryManager();
-        assertEventually(() -> assertEquals(actualLabelCount, getFacets()));
+        assertEquals(actualLabelCount, getFacets());
     }
 
     @Test
@@ -361,20 +358,19 @@ public class ElasticFacetTest {
         adminSession.save();
         createDataset(NUM_LEAF_NODES_FOR_LARGE_DATASET);
         qe = adminSession.getWorkspace().getQueryManager();
-        assertEventually(() -> {
-            Map<String, Integer> facets = getFacets();
-            assertEquals("Unexpected number of facets", actualLabelCount.size(), facets.size());
-        });
+
+        Map<String, Integer> facets = getFacets();
+        assertEquals("Unexpected number of facets", actualLabelCount.size(), facets.size());
 
         for (Map.Entry<String, Integer> facet : actualLabelCount.entrySet()) {
-            assertEventually(() -> {
-                String facetLabel = facet.getKey();
-                int facetCount = getFacets().get(facetLabel);
-                float ratio = ((float) facetCount) / facet.getValue();
-                assertTrue("Facet count for label: " + facetLabel + " is outside of 5% margin of error. " +
-                                "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
-                        Math.abs(ratio - 1) < 0.05);
-            });
+
+            String facetLabel = facet.getKey();
+            int facetCount = getFacets().get(facetLabel);
+            float ratio = ((float) facetCount) / facet.getValue();
+            assertTrue("Facet count for label: " + facetLabel + " is outside of 5% margin of error. " +
+                            "Expected: " + facet.getValue() + "; Got: " + facetCount + "; Ratio: " + ratio,
+                    Math.abs(ratio - 1) < 0.05);
+
         }
     }
 
@@ -414,10 +410,6 @@ public class ElasticFacetTest {
                 .stream()
                 .flatMap(dim -> Objects.requireNonNull(facetResult.getFacets(dim)).stream())
                 .collect(Collectors.toMap(FacetResult.Facet::getLabel, FacetResult.Facet::getCount));
-    }
-
-    private static void assertEventually(Runnable r) {
-        ElasticTestUtils.assertEventually(r, BULK_FLUSH_INTERVAL_MS_DEFAULT * 3);
     }
 
 }
